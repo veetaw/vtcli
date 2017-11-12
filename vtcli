@@ -1,3 +1,41 @@
 #!/usr/bin/env python3
 
+import os
+import argparse
+import sys
 
+from vtspy import VirusTotal
+
+file_path = ""
+
+
+class CliUtils:
+    def __init__(self):
+        self.p = argparse.ArgumentParser()
+        self.add_args()
+        self.check()
+
+    def add_args(self):
+        self.p.add_argument('file', help='path to the file you want to scan')
+
+    def check(self):
+        try:
+            _ = os.environ['VIRUS_TOTAL_TOKEN']
+        except KeyError:
+            print("you must set the virus total api token with:\n")
+            print("$ export VIRUS_TOTAL_TOKEN=\"token-here\"")
+            sys.exit(1)
+        args = self.p.parse_args()
+        global file_path
+        file_path = os.path.abspath(args.file)
+        if not os.path.isfile(file_path):
+            print("vtspy can scan only files under 30MB not directories nor unexistent fileis")
+            sys.exit(0)
+        elif os.path.getsize(file_path) >= 30000000:
+            print("vtspy can scan only files under 30MB")
+            sys.exit(0)
+
+
+if __name__ == '__main__':
+    CliUtils()
+    print(file_path)
