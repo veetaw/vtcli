@@ -1,0 +1,2 @@
+-e git+git@github.com:veetaw/vts-py.git#egg=vtspy
+daemonize
