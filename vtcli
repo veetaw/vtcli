@@ -29,11 +29,12 @@ class CliUtils:
         global file_path
         file_path = os.path.abspath(args.file)
         if not os.path.isfile(file_path):
-            print("vtspy can scan only files under 30MB not directories nor unexistent fileis")
+            print("vtcli can scan only files under 30MB not directories nor unexistent fileis")
             sys.exit(0)
         elif os.path.getsize(file_path) >= 30000000:
-            print("vtspy can scan only files under 30MB")
+            print("vtcli can scan only files under 30MB")
             sys.exit(0)
+
 
 
 if __name__ == '__main__':
