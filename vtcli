@@ -4,7 +4,10 @@ import argparse
 import os
 import sys
 
+from vtspy import VirusTotal, VirusTotalException
+
 file_path = ""
+file_name = ""
 
 
 class CliUtils:
@@ -18,13 +21,15 @@ class CliUtils:
 
     def check(self):
         try:
-            _ = os.environ['VIRUS_TOTAL_TOKEN']
+            os.environ['VIRUS_TOTAL_TOKEN']
         except KeyError:
             print("you must set the virus total api token with:\n")
             print("$ export VIRUS_TOTAL_TOKEN=\"token-here\"")
             sys.exit(1)
         args = self.p.parse_args()
         global file_path
+        global file_name
+        file_name = args.file
         file_path = os.path.abspath(args.file)
         if not os.path.isfile(file_path):
             print("vtcli can scan only files under 30MB not directories nor unexistent fileis")
@@ -33,7 +38,49 @@ class CliUtils:
             print("vtcli can scan only files under 30MB")
             sys.exit(0)
 
+        if not os.path.exists(os.path.expanduser("~/.vtcli/")):
+            os.makedirs(os.path.expanduser("~/.vtcli/logs"))
+
+
+class Scan:
+    def __init__(self, fp):
+        v = VirusTotal(os.environ['VIRUS_TOTAL_TOKEN'])
+        result = v.scan(open(fp, 'rb'), file_name)
+        try:
+            report = v.get_report(result['resource'])
+            if self.__is_scan_completed(report):
+                pretty_report = 'file {0} ({1}) successfully scanned\n'
+                pretty_report += 'date: {2}\n'
+                pretty_report += 'result: {3} of {4} antiviruses reported this file as malware.\n'
+
+                date = report['scan_date']
+                positives = report['positives']
+                total = report['total']
+
+                if positives > 0:
+                    print("this file is probably a malware.\n")
+                else:
+                    print("this file is probably not a malware.\n")
+
+                print(pretty_report.format(file_name, fp, date, positives, total))
+
+                print('you can find the complete report at ~/.vtcli/logs/{0}.json'.format(report['md5']))
+                with open(os.path.expanduser('~/.vtcli/logs/{0}.json'.format(report['md5'])), 'w') as log_file:
+                    log_file.write(str(report))
+            else:
+                pass  # start daemon to fetch data
+        except VirusTotalException:
+            pass  # handle exception
+
+    @staticmethod
+    def __is_scan_completed(report):
+        try:
+            report['positives']  # KeyError if scan is not complete (response_code -2 randomly doesn't work)
+            return True
+        except KeyError:
+            return False
+
 
 if __name__ == '__main__':
     CliUtils()
-    print(file_path)
+    Scan(file_path)
